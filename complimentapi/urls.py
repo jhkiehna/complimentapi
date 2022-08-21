@@ -15,7 +15,18 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from rest_framework import routers
+
+from complimentapi.views import AuthViewSet
+
+
+router = routers.SimpleRouter(trailing_slash=False)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 ]
+
+router.register(r'auth', AuthViewSet, basename='/')
+
+
+urlpatterns += router.urls
