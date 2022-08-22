@@ -75,9 +75,11 @@ class AuthViewSet(viewsets.GenericViewSet):
                 }
             )
 
-            # Create and return jwt to client
+            # Create jwt to client
             refresh = RefreshToken.for_user(user)
-            return Response({'refresh': str(refresh), 'access': str(refresh.access_token)}, 200)
+
+            # In production, this would be changed to a redirect to the frontend, with the token in a qs param
+            return Response({'access': str(refresh.access_token)}, 200)
         except Exception as e:
             logger.error(str(e), exc_info=True)
             return Response(500)
