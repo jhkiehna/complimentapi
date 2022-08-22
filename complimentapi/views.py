@@ -34,7 +34,6 @@ class AuthViewSet(viewsets.GenericViewSet):
             '&redirect_uri={}' \
             '&client_id={}' \
             '&response_type=code' \
-            '&state=state_parameter_passthrough_value' \
             .format(' '.join(scopes), redirect_uri, oauth_client_id)
 
         return Response(headers={'Location': oauth_url}, status=302)
