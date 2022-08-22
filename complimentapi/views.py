@@ -3,8 +3,10 @@ import requests
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework.decorators import action
 from rest_framework.renderers import JSONRenderer
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.decorators import action, permission_classes
 
 from complimentapi.models import User
 from complimentapi.serializers import UserSerializer
@@ -40,16 +42,12 @@ class AuthViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=['get'], name='OAuth Callback')
     def oauth_callback(self, request: Request) -> Response:
-        logger.info(request.query_params)
         try:
-            response_data = {}
-            response_data.update(request.query_params)
-
             # Check access denied or no code
             if request.query_params.get('error') == 'access_denied' or not request.query_params.get('code'):
                 return Response(401)
 
-            # Make request for access token
+            # Make request for access token and get user info
             token_response_data = requests.post(
                 'https://oauth2.googleapis.com/token',
                 {
@@ -60,11 +58,7 @@ class AuthViewSet(viewsets.GenericViewSet):
                     'redirect_uri': redirect_uri
                 }
             ).json()
-            response_data.update(token_response_data)
 
-            logger.info(token_response_data)
-
-            # Make request for user info
             user_info = requests.get(
                 'https://www.googleapis.com/userinfo/v2/me',
                 headers={'Authorization': 'Bearer {}'.format(token_response_data.get('access_token'))}
@@ -82,8 +76,14 @@ class AuthViewSet(viewsets.GenericViewSet):
                 }
             )
 
-            return Response(JSONRenderer().render(UserSerializer(user).data), 200)          
+            # Create and return jwt to client
+            refresh = RefreshToken.for_user(user)
+            return Response({'refresh': str(refresh), 'access': str(refresh.access_token)}, 200)
         except Exception as e:
             logger.error(str(e), exc_info=True)
             return Response(500)
 
+    @action(detail=False, methods=['get'], name='Me')
+    @permission_classes([IsAuthenticated])
+    def me(self, request: Request) -> Response:
+        return Response(JSONRenderer().render(UserSerializer(request.user).data), 200)
