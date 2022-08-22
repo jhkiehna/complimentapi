@@ -3,13 +3,12 @@ import requests
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework.renderers import JSONRenderer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action, permission_classes
 
-from complimentapi.models import User
-from complimentapi.serializers import UserSerializer
+from complimentapi.models import Receiver, User
+from complimentapi.serializers import UserSerializer, ReceiverSerializer
 
 import logging
 logger = logging.getLogger('django')
@@ -86,4 +85,35 @@ class AuthViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=['get'], name='Me')
     @permission_classes([IsAuthenticated])
     def me(self, request: Request) -> Response:
-        return Response(JSONRenderer().render(UserSerializer(request.user).data), 200)
+        return Response(UserSerializer(request.user).data, 200)
+
+class ReceiverViewSet(viewsets.ViewSet):
+    """
+    Viewset for Receiver actions.
+    """
+
+    @permission_classes([IsAuthenticated])
+    def list(self, request: Request) -> Response:
+        queryset = Receiver.objects.filter(user=request.user)
+        return Response(ReceiverSerializer(queryset, many=True).data)
+
+    # TODO - need to add authorization
+    def retrieve(self, request: Request, pk: int=None) -> Response:
+        try:
+            receiver = Receiver.objects.get(id=pk)
+        except Exception as e:
+            logger.error(str(e), exc_info=True)
+            return Response(404)
+        
+        return Response(ReceiverSerializer(receiver).data)
+
+    @permission_classes([IsAuthenticated])
+    def create(self, request: Request) -> Response:
+        serializer = ReceiverSerializer(data={**request.data, 'user': request.user.id})
+        if not serializer.is_valid():
+            return Response(serializer.errors, 400)
+
+        receiver = serializer.save(user_id=request.user.id)
+
+        return Response(ReceiverSerializer(receiver).data)
+        
