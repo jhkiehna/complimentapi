@@ -27,3 +27,10 @@ class User(models.Model):
         authenticated in templates.
         """
         return True
+
+class Receiver(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user')
+    name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+
