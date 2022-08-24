@@ -1,5 +1,7 @@
 import os
 import requests
+import random
+from datetime import datetime
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.request import Request
@@ -185,3 +187,16 @@ class ComplimentViewSet(viewsets.ViewSet):
     def destroy(self, request: Request, pk: int = None, receiver_pk: int = None):
         Compliment.objects.filter(id=pk).delete()
         return Response(status=204)
+
+    @action(detail=False, permission_classes=[OwnsReceiver])
+    def random(self, request: Request, receiver_pk: int = None) -> Response:
+        compliments = Compliment.objects.filter(receiver=receiver_pk).order_by('last_retrieved_at')
+
+        weights = [i + 1 for i, _ in enumerate(compliments)]
+        weights.reverse()
+        random_compliment = random.choices(compliments, weights=weights, k=1).pop()
+
+        random_compliment.last_retrieved_at = datetime.now()
+        random_compliment.save()
+
+        return Response(ComplimentSerializer(random_compliment).data)
