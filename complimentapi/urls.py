@@ -15,11 +15,12 @@ Including another URLconf
 """
 from rest_framework import routers
 
-from complimentapi.views import AuthViewSet
+from complimentapi.views import AuthViewSet, ReceiverViewSet
 
 
 router = routers.SimpleRouter(trailing_slash=False)
 
 router.register(r'auth', AuthViewSet, basename='/')
+router.register(r'receivers', ReceiverViewSet, basename='/')
 
 urlpatterns = router.urls

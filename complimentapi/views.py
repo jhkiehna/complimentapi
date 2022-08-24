@@ -3,13 +3,13 @@ import requests
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework.renderers import JSONRenderer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.decorators import action, permission_classes
+from rest_framework.decorators import action
 
-from complimentapi.models import User
-from complimentapi.serializers import UserSerializer
+from complimentapi.models import Receiver, User
+from complimentapi.serializers import UserSerializer, ReceiverSerializer
+from complimentapi.permissions import OwnsReceiver
 
 import logging
 logger = logging.getLogger('django')
@@ -35,7 +35,6 @@ class AuthViewSet(viewsets.GenericViewSet):
             '&redirect_uri={}' \
             '&client_id={}' \
             '&response_type=code' \
-            '&state=state_parameter_passthrough_value' \
             .format(' '.join(scopes), redirect_uri, oauth_client_id)
 
         return Response(headers={'Location': oauth_url}, status=302)
@@ -76,14 +75,63 @@ class AuthViewSet(viewsets.GenericViewSet):
                 }
             )
 
-            # Create and return jwt to client
+            # Create jwt to client
             refresh = RefreshToken.for_user(user)
-            return Response({'refresh': str(refresh), 'access': str(refresh.access_token)}, 200)
+
+            # In production, this would be changed to a redirect to the frontend, with the token in a qs param
+            return Response({'access': str(refresh.access_token)}, 200)
         except Exception as e:
             logger.error(str(e), exc_info=True)
             return Response(500)
 
-    @action(detail=False, methods=['get'], name='Me')
-    @permission_classes([IsAuthenticated])
+    @action(detail=False, methods=['get'], name='Me', permission_classes=[IsAuthenticated])
     def me(self, request: Request) -> Response:
-        return Response(JSONRenderer().render(UserSerializer(request.user).data), 200)
+        return Response(UserSerializer(request.user).data, 200)
+
+
+class ReceiverViewSet(viewsets.ViewSet):
+    """
+    Viewset for Receiver actions.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        permissions = super().get_permissions()
+
+        if self.action in ['retrieve', 'update', 'destroy']:
+            permissions.append(OwnsReceiver())
+
+        return permissions
+
+    def list(self, request: Request) -> Response:
+        queryset = Receiver.objects.filter(user=request.user)
+        return Response(ReceiverSerializer(queryset, many=True).data)
+
+    def retrieve(self, request: Request, pk: int = None) -> Response:
+        return Response(ReceiverSerializer(Receiver.objects.get(id=pk)).data)
+
+    def create(self, request: Request) -> Response:
+        serializer = ReceiverSerializer(data={**request.data, 'user': request.user.id})
+        if not serializer.is_valid():
+            return Response(serializer.errors, 400)
+
+        serializer.save(user=request.user)
+
+        return Response(serializer.data)
+
+    def partial_update(self, request: Request, pk: int = None) -> Response:
+        receiver = Receiver.objects.get(id=pk)
+        serializer = ReceiverSerializer(receiver, data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            logger.info(serializer.data)
+            return Response(serializer.errors, 400)
+
+        serializer.update(receiver, serializer.validated_data)
+
+        return Response(serializer.data)
+
+    def destroy(self, request: Request, pk: int = None):
+        Receiver.objects.get(id=pk).delete()
+        return Response(status=204)
