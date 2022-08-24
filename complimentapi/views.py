@@ -93,6 +93,7 @@ class ReceiverViewSet(viewsets.ViewSet):
     """
     Viewset for Receiver actions.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
