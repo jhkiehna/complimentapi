@@ -35,3 +35,10 @@ class Receiver(models.Model):
     name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
+
+
+class Compliment(models.Model):
+    receiver = models.ForeignKey(Receiver, on_delete=models.CASCADE, related_name='compliments')
+    text = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)

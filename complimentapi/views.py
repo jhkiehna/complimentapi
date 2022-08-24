@@ -7,9 +7,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action
 
-from complimentapi.models import Receiver, User
-from complimentapi.serializers import UserSerializer, ReceiverSerializer
-from complimentapi.permissions import OwnsReceiver
+from complimentapi.models import Receiver, User, Compliment
+from complimentapi.serializers import UserSerializer, ReceiverSerializer, ComplimentSerializer
+from complimentapi.permissions import OwnsReceiver, OwnsCompliment
 
 import logging
 logger = logging.getLogger('django')
@@ -99,7 +99,7 @@ class ReceiverViewSet(viewsets.ViewSet):
     def get_permissions(self):
         permissions = super().get_permissions()
 
-        if self.action in ['retrieve', 'update', 'destroy']:
+        if self.action in ['retrieve', 'partial_update', 'destroy']:
             permissions.append(OwnsReceiver())
 
         return permissions
@@ -134,4 +134,54 @@ class ReceiverViewSet(viewsets.ViewSet):
 
     def destroy(self, request: Request, pk: int = None):
         Receiver.objects.get(id=pk).delete()
+        return Response(status=204)
+
+
+class ComplimentViewSet(viewsets.ViewSet):
+    """
+    Viewset for Receiver actions.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        permissions = super().get_permissions()
+
+        if self.action in ['list', 'create']:
+            permissions.append(OwnsReceiver())
+        if self.action in ['retrieve', 'partial_update', 'destroy']:
+            permissions.append(OwnsCompliment())
+
+        return permissions
+
+    def list(self, request: Request, receiver_pk: int = None) -> Response:
+        receiver = Receiver.objects.get(id=receiver_pk)
+        return Response(ComplimentSerializer(receiver.compliments.all(), many=True).data)
+
+    def retrieve(self, request: Request, pk: int = None, receiver_pk: int = None) -> Response:
+        return Response(ComplimentSerializer(Compliment.objects.get(id=pk)).data)
+
+    def create(self, request: Request, receiver_pk: int = None) -> Response:
+        serializer = ComplimentSerializer(data={**request.data, 'receiver': receiver_pk})
+        if not serializer.is_valid():
+            return Response(serializer.errors, 400)
+
+        serializer.save(receiver_id=receiver_pk)
+
+        return Response(serializer.data)
+
+    def partial_update(self, request: Request, pk: int = None, receiver_pk: int = None) -> Response:
+        compliment = Compliment.objects.get(id=pk)
+        serializer = ComplimentSerializer(compliment, data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            logger.info(serializer.data)
+            return Response(serializer.errors, 400)
+
+        serializer.update(compliment, serializer.validated_data)
+
+        return Response(serializer.data)
+
+    def destroy(self, request: Request, pk: int = None, receiver_pk: int = None):
+        Compliment.objects.filter(id=pk).delete()
         return Response(status=204)
