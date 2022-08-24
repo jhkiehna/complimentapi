@@ -119,7 +119,7 @@ class ReceiverViewSet(viewsets.ViewSet):
 
         return Response(serializer.data)
 
-    def update(self, request: Request, pk: int = None) -> Response:
+    def partial_update(self, request: Request, pk: int = None) -> Response:
         receiver = Receiver.objects.get(id=pk)
         serializer = ReceiverSerializer(receiver, data=request.data, partial=True)
 
