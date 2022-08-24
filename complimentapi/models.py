@@ -1,3 +1,4 @@
+import datetime
 from django.db import models
 
 
@@ -42,3 +43,4 @@ class Compliment(models.Model):
     text = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
+    last_retrieved_at = models.DateTimeField(default=datetime.datetime.now())
