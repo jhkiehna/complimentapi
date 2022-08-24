@@ -5,10 +5,11 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.decorators import action, permission_classes
+from rest_framework.decorators import action
 
 from complimentapi.models import Receiver, User
 from complimentapi.serializers import UserSerializer, ReceiverSerializer
+from complimentapi.permissions import OwnsReceiver
 
 import logging
 logger = logging.getLogger('django')
@@ -83,32 +84,32 @@ class AuthViewSet(viewsets.GenericViewSet):
             logger.error(str(e), exc_info=True)
             return Response(500)
 
-    @action(detail=False, methods=['get'], name='Me')
-    @permission_classes([IsAuthenticated])
+    @action(detail=False, methods=['get'], name='Me', permission_classes=[IsAuthenticated])
     def me(self, request: Request) -> Response:
         return Response(UserSerializer(request.user).data, 200)
+
 
 class ReceiverViewSet(viewsets.ViewSet):
     """
     Viewset for Receiver actions.
     """
+    permission_classes = [IsAuthenticated]
 
-    @permission_classes([IsAuthenticated])
+    def get_permissions(self):
+        permissions = super().get_permissions()
+
+        if self.action == 'retrieve':
+            permissions.append(OwnsReceiver())
+
+        return permissions
+
     def list(self, request: Request) -> Response:
         queryset = Receiver.objects.filter(user=request.user)
         return Response(ReceiverSerializer(queryset, many=True).data)
 
-    # TODO - need to add authorization
-    def retrieve(self, request: Request, pk: int=None) -> Response:
-        try:
-            receiver = Receiver.objects.get(id=pk)
-        except Exception as e:
-            logger.error(str(e), exc_info=True)
-            return Response(404)
-        
-        return Response(ReceiverSerializer(receiver).data)
+    def retrieve(self, request: Request, pk: int = None) -> Response:
+        return Response(ReceiverSerializer(Receiver.objects.get(id=pk)).data)
 
-    @permission_classes([IsAuthenticated])
     def create(self, request: Request) -> Response:
         serializer = ReceiverSerializer(data={**request.data, 'user': request.user.id})
         if not serializer.is_valid():
@@ -117,4 +118,3 @@ class ReceiverViewSet(viewsets.ViewSet):
         receiver = serializer.save(user_id=request.user.id)
 
         return Response(ReceiverSerializer(receiver).data)
-        
