@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class User(models.Model):
     email = models.CharField(max_length=255, unique=True)
     first_name = models.CharField(max_length=255, null=True)
@@ -28,9 +29,9 @@ class User(models.Model):
         """
         return True
 
+
 class Receiver(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='receivers')
     name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
-
