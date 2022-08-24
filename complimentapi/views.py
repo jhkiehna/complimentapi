@@ -98,7 +98,7 @@ class ReceiverViewSet(viewsets.ViewSet):
     def get_permissions(self):
         permissions = super().get_permissions()
 
-        if self.action in ['retrieve', 'update']:
+        if self.action in ['retrieve', 'update', 'destroy']:
             permissions.append(OwnsReceiver())
 
         return permissions
@@ -130,3 +130,7 @@ class ReceiverViewSet(viewsets.ViewSet):
         serializer.update(receiver, serializer.validated_data)
 
         return Response(serializer.data)
+
+    def destroy(self, request: Request, pk: int = None):
+        Receiver.objects.get(id=pk).delete()
+        return Response(status=204)
