@@ -98,7 +98,7 @@ class ReceiverViewSet(viewsets.ViewSet):
     def get_permissions(self):
         permissions = super().get_permissions()
 
-        if self.action == 'retrieve':
+        if self.action in ['retrieve', 'update']:
             permissions.append(OwnsReceiver())
 
         return permissions
@@ -115,6 +115,18 @@ class ReceiverViewSet(viewsets.ViewSet):
         if not serializer.is_valid():
             return Response(serializer.errors, 400)
 
-        receiver = serializer.save(user_id=request.user.id)
+        serializer.save(user=request.user)
 
-        return Response(ReceiverSerializer(receiver).data)
+        return Response(serializer.data)
+
+    def update(self, request: Request, pk: int = None) -> Response:
+        receiver = Receiver.objects.get(id=pk)
+        serializer = ReceiverSerializer(receiver, data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            logger.info(serializer.data)
+            return Response(serializer.errors, 400)
+
+        serializer.update(receiver, serializer.validated_data)
+
+        return Response(serializer.data)
