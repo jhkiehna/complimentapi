@@ -1,4 +1,6 @@
+import random
 import datetime
+from typing import List
 from django.db import models
 
 
@@ -36,6 +38,30 @@ class Receiver(models.Model):
     name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
+
+    def get_random_compliment(self):
+        compliments = self.compliments.all().order_by('last_retrieved_at')
+        weights = [i + 1 for i, _ in enumerate(compliments)]
+        weights.reverse()
+
+        return random.choices(compliments, weights=weights, k=1).pop()
+
+    def get_random_compliments(self, number: int) -> List:
+        compliments = self.compliments.all().order_by('last_retrieved_at')
+        selected_compliments = []
+
+        number = number if number > 0 or number < len(compliments) else len(compliments)
+
+        weights = [i + 1 for i, _ in enumerate(compliments)]
+        weights.reverse()
+
+        while len(selected_compliments) < number:
+            random_compliment = random.choices(compliments, weights=weights, k=1).pop()
+
+            if random_compliment.id not in [compliment.id for compliment in selected_compliments]:
+                selected_compliments.append(random_compliment)
+
+        return selected_compliments
 
 
 class Compliment(models.Model):
