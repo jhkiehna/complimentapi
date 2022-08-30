@@ -1,5 +1,6 @@
 import os
 import requests
+from datetime import datetime
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.request import Request
@@ -135,6 +136,33 @@ class ReceiverViewSet(viewsets.ViewSet):
     def destroy(self, request: Request, pk: int = None):
         Receiver.objects.get(id=pk).delete()
         return Response(status=204)
+
+    @action(detail=True, permission_classes=[OwnsReceiver], url_path='random-compliment')
+    def random_compliment(self, request: Request, pk: int = None) -> Response:
+        random_compliment = Receiver.objects.get(id=pk).get_random_compliment()
+
+        random_compliment.last_retrieved_at = datetime.now()
+        random_compliment.save()
+
+        return Response(ComplimentSerializer(random_compliment).data)
+
+    @action(detail=True, permission_classes=[OwnsReceiver], url_path='random-compliment-list')
+    def random_compliment_list(self, request: Request, pk: int = None) -> Response:
+        number: int = 3
+
+        try:
+            number = int(request.QUERY_PARAMS.get('number'))
+        except Exception as e:
+            logger.error(str(e), exc_info=True)
+
+        random_compliments = Receiver.objects.get(id=pk).get_random_compliments(number)
+
+        for compliment in random_compliments:
+            compliment.last_retrieved_at = datetime.now()
+
+        Compliment.objects.bulk_update(random_compliments, ['last_retrieved_at'])
+
+        return Response(ComplimentSerializer(random_compliments, many=True).data)
 
 
 class ComplimentViewSet(viewsets.ViewSet):
