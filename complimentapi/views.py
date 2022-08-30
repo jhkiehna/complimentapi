@@ -133,7 +133,7 @@ class ReceiverViewSet(viewsets.ViewSet):
 
         return Response(serializer.data)
 
-    def destroy(self, request: Request, pk: int = None):
+    def destroy(self, request: Request, pk: int = None) -> Response:
         Receiver.objects.get(id=pk).delete()
         return Response(status=204)
 
@@ -210,6 +210,6 @@ class ComplimentViewSet(viewsets.ViewSet):
 
         return Response(serializer.data)
 
-    def destroy(self, request: Request, pk: int = None, receiver_pk: int = None):
+    def destroy(self, request: Request, pk: int = None, receiver_pk: int = None) -> Response:
         Compliment.objects.filter(id=pk).delete()
         return Response(status=204)
